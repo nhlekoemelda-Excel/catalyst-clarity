@@ -1,0 +1,163 @@
+import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useMutation } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { ArrowLeft, Check, Copy, Loader2, RotateCcw, Sparkles, TriangleAlert } from "lucide-react";
+import { runAssistant } from "@/lib/assistant.functions";
+import { Markdown } from "@/components/Markdown";
+import type { ToolConfig } from "@/lib/tools";
+
+export function ToolWorkspace({ tool }: { tool: ToolConfig }) {
+  const [input, setInput] = useState("");
+  const [option, setOption] = useState(tool.options[0]!);
+  const [copied, setCopied] = useState(false);
+  const call = useServerFn(runAssistant);
+
+  const mutation = useMutation({
+    mutationFn: (payload: { input: string; option: string }) =>
+      call({ data: { tool: tool.id, input: payload.input, option: payload.option } }),
+  });
+
+  const Icon = tool.icon;
+  const tooShort = input.trim().length < 10;
+
+  const copy = async () => {
+    if (!mutation.data) return;
+    await navigator.clipboard.writeText(mutation.data.text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+      <Link
+        to="/"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="size-4" /> Dashboard
+      </Link>
+
+      <div className="mt-5 flex items-start gap-4">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-secondary text-accent">
+          <Icon className="size-5" />
+        </span>
+        <div>
+          <h1 className="text-2xl font-semibold sm:text-3xl">{tool.name}</h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{tool.description}</p>
+        </div>
+      </div>
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+        <section className="surface-card p-5 sm:p-6">
+          <label
+            htmlFor="tool-input"
+            className="font-display text-sm font-semibold text-foreground"
+          >
+            {tool.label}
+          </label>
+          <textarea
+            id="tool-input"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={tool.placeholder}
+            rows={12}
+            className="mt-3 w-full resize-y rounded-xl border border-input bg-background px-3.5 py-3 text-sm leading-relaxed outline-none transition-shadow placeholder:text-muted-foreground/70 focus:ring-2 focus:ring-ring/50"
+          />
+
+          <div className="mt-4">
+            <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+              {tool.optionLabel}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {tool.options.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setOption(opt)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    option === opt
+                      ? "border-accent bg-accent text-accent-foreground"
+                      : "border-border bg-background text-muted-foreground hover:border-accent/50 hover:text-foreground"
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={tooShort || mutation.isPending}
+              onClick={() => mutation.mutate({ input, option })}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-accent-foreground shadow-[var(--shadow-card)] transition-opacity disabled:cursor-not-allowed disabled:opacity-45"
+              style={{ backgroundImage: "var(--gradient-spark)" }}
+            >
+              {mutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Sparkles className="size-4" />
+              )}
+              {mutation.isPending ? "Working…" : tool.cta}
+            </button>
+            {(mutation.data || mutation.isError) && (
+              <button
+                type="button"
+                onClick={() => mutation.reset()}
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <RotateCcw className="size-3.5" /> Clear result
+              </button>
+            )}
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Avoid pasting confidential personal data. Output is generated by AI and needs a human
+            check.
+          </p>
+        </section>
+
+        <section className="surface-card min-h-[22rem] p-5 sm:p-6">
+          {mutation.isError && (
+            <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+              <p>{(mutation.error as Error).message}</p>
+            </div>
+          )}
+
+          {!mutation.data && !mutation.isError && (
+            <div className="flex h-full flex-col justify-center py-10 text-center">
+              <p className="font-display text-sm font-semibold text-foreground">
+                {mutation.isPending ? "Thinking it through…" : "Your result appears here"}
+              </p>
+              <p className="mx-auto mt-2 max-w-xs text-sm text-muted-foreground">
+                {mutation.isPending
+                  ? "Structuring your input into a usable output."
+                  : `You'll get: ${tool.outputs.join(", ")}.`}
+              </p>
+            </div>
+          )}
+
+          {mutation.data && (
+            <>
+              <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+                <h2 className="font-display text-sm font-semibold">Result</h2>
+                <button
+                  type="button"
+                  onClick={copy}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {copied ? <Check className="size-3.5 text-accent" /> : <Copy className="size-3.5" />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
+              <div className="pt-4">
+                <Markdown content={mutation.data.text} />
+              </div>
+            </>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
