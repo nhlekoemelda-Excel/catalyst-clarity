@@ -5,8 +5,7 @@ const ToolId = z.enum(["email", "meeting", "tasks", "research"]);
 
 const Input = z.object({
   tool: ToolId,
-  input: z.string().min(10).max(12000),
-  option: z.string().max(60).optional(),
+  values: z.record(z.string(), z.string().max(12000)),
 });
 
 export const runAssistant = createServerFn({ method: "POST" })
@@ -17,10 +16,10 @@ export const runAssistant = createServerFn({ method: "POST" })
     const { streamText } = await import("ai");
 
     const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!apiKey) throw new Error("AI is not configured for this workspace.");
+    if (!apiKey) throw new Error("Catalyst AI isn't configured for this workspace yet.");
 
     const gateway = createLovableAiGatewayProvider(apiKey);
-    const { system, prompt } = buildPrompt(data.tool, data.input, data.option);
+    const { system, prompt } = buildPrompt(data.tool, data.values);
 
     try {
       const result = streamText({
@@ -31,10 +30,11 @@ export const runAssistant = createServerFn({ method: "POST" })
       const text = await result.text;
       return { text };
     } catch (error) {
-      const status = (error as { statusCode?: number; status?: number })?.statusCode ??
+      const status =
+        (error as { statusCode?: number; status?: number })?.statusCode ??
         (error as { status?: number })?.status;
       if (status === 429) {
-        throw new Error("The AI service is busy right now. Please retry in a moment.");
+        throw new Error("Catalyst is busy right now. Please try again in a moment.");
       }
       if (status === 402) {
         throw new Error("This workspace is out of AI credits. Add credits in Lovable to continue.");
@@ -42,8 +42,6 @@ export const runAssistant = createServerFn({ method: "POST" })
       if (status === 403) {
         throw new Error("AI access is blocked by workspace policy. Ask an admin to enable it.");
       }
-      throw new Error(
-        error instanceof Error ? error.message : "The AI request failed. Please try again.",
-      );
+      throw new Error("Something went wrong while generating your result. Please try again.");
     }
   });
