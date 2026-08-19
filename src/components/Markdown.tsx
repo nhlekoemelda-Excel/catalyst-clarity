@@ -29,7 +29,7 @@ function parse(md: string): Block[] {
     const heading = line.match(/^#{1,6}\s+(.*)$/);
     if (heading) {
       flush();
-      blocks.push({ kind: "heading", text: heading[1] });
+      blocks.push({ kind: "heading", text: heading[1] ?? "" });
       continue;
     }
     const bullet = line.match(/^[-*]\s+(.*)$/);
@@ -44,7 +44,7 @@ function parse(md: string): Block[] {
         if (list) blocks.push({ kind: "list", ...list });
         list = { items: [], ordered: isOrdered };
       }
-      list.items.push((bullet ? bullet[1] : ordered![1]).trim());
+      list.items.push(((bullet ? bullet[1] : ordered?.[1]) ?? "").trim());
       continue;
     }
     if (list) {
