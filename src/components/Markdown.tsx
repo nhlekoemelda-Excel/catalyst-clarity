@@ -1,7 +1,17 @@
 type Block =
   | { kind: "heading"; text: string }
   | { kind: "list"; items: string[]; ordered: boolean }
+  | { kind: "table"; head: string[]; rows: string[][] }
   | { kind: "para"; text: string };
+
+const isTableRow = (line: string) => line.startsWith("|") && line.includes("|", 1);
+const isDivider = (line: string) => /^\|[\s:|-]+\|$/.test(line);
+const cells = (line: string) =>
+  line
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((c) => c.trim());
 
 function parse(md: string): Block[] {
   const blocks: Block[] = [];
@@ -20,8 +30,8 @@ function parse(md: string): Block[] {
     }
   };
 
-  for (const raw of lines) {
-    const line = raw.trim();
+  for (let i = 0; i < lines.length; i++) {
+    const line = (lines[i] ?? "").trim();
     if (!line) {
       flush();
       continue;
@@ -30,6 +40,19 @@ function parse(md: string): Block[] {
     if (heading) {
       flush();
       blocks.push({ kind: "heading", text: heading[1] ?? "" });
+      continue;
+    }
+    if (isTableRow(line) && isDivider((lines[i + 1] ?? "").trim())) {
+      flush();
+      const head = cells(line);
+      const rows: string[][] = [];
+      i += 2;
+      while (i < lines.length && isTableRow((lines[i] ?? "").trim())) {
+        rows.push(cells((lines[i] ?? "").trim()));
+        i++;
+      }
+      i--;
+      blocks.push({ kind: "table", head, rows });
       continue;
     }
     const bullet = line.match(/^[-*]\s+(.*)$/);
