@@ -130,4 +130,7 @@ The published version of Catalyst AI is available at:
 
 ## Project Repository
 
-The source code is maintained in the connected GitHub repository. Please refer to the repository linked in the Lovable project settings or your GitHub account for the latest commits, branches, and collaboration history.
+The source code is maintained in the connected GitHub repository.
+
+**GitHub Repository:**  
+https://github.com/nhlekoemelda-Excel/catalyst-clarity
