@@ -136,6 +136,37 @@ export function Markdown({ content }: { content: string }) {
             </ListTag>
           );
         }
+        if (block.kind === "table") {
+          return (
+            <div key={i} className="-mx-1 overflow-x-auto">
+              <table className="w-full min-w-[30rem] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    {block.head.map((cell, j) => (
+                      <th
+                        key={j}
+                        className="px-2.5 py-2 text-xs font-semibold tracking-[0.08em] text-foreground uppercase"
+                      >
+                        {cell}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {block.rows.map((row, j) => (
+                    <tr key={j} className="border-b border-border/60 align-top last:border-0">
+                      {row.map((cell, k) => (
+                        <td key={k} className="px-2.5 py-2">
+                          <Inline text={cell} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
         return (
           <p key={i} className="whitespace-pre-wrap">
             <Inline text={block.text} />
