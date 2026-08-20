@@ -273,7 +273,7 @@ function Field({
 }: {
   field: FieldConfig;
   value: string;
-  error?: string;
+  error?: string | undefined;
   onChange: (value: string) => void;
 }) {
   const id = `field-${field.name}`;
